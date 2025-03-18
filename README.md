@@ -28,3 +28,12 @@
     - Repository Name:` rust-cli-file-uploader`
 
 - Note:  Use a workspaces to link both task 2 and 3 from differents directories
+
+### Task 4 (Thursday): "Standalone File Compression Function"
+
+    - Goal: Implement a function that compresses files using a Rust compression library.
+    - Description:
+        - Use a library like flate2 or brotli to compress a given file.
+        - Write this as a self-contained function or small program that reads an input file and writes a compressed output file.
+          This task introduces external libraries, file processing, and basic algorithm integration.
+    - Repository Name: rust-file-compression
