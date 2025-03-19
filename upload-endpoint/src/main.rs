@@ -11,6 +11,10 @@ async fn hello() -> Html<&'static str> {
 }
 
 pub async fn upload(mut multipart: Multipart) {
+    use std::fs;
+
+    fs::create_dir_all("../files/").expect("Failed to create 'files' directory");
+
     while let Some(field) = multipart
         .next_field()
         .await
@@ -49,3 +53,4 @@ async fn main() {
         .await
         .expect("Failed to serve 'app'!");
 }
+

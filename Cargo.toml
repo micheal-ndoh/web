@@ -1,3 +1,3 @@
 [workspace]
 resolver = "3"
-members = [ "rust-cli-file-uploader", "rust-file-compression","rust-file-upload-endpoint"]
+members = ["file-uploader", "file-compression", "upload-endpoint"]
