@@ -1,4 +1,6 @@
 use std::{fs::File, io::Write};
+use std::env;
+
 
 use axum::{extract::Multipart, response::Html, routing::get, Router};
 
@@ -12,7 +14,10 @@ async fn hello() -> Html<&'static str> {
 
 pub async fn upload(mut multipart: Multipart) {
     use std::fs;
+    use std::env;
 
+    let current_directory = std::env::current_dir().expect("failed to get current directory");
+    let files_directory = current_directory.join("files");
     fs::create_dir_all("../files/").expect("Failed to create 'files' directory");
 
     while let Some(field) = multipart
@@ -28,7 +33,7 @@ pub async fn upload(mut multipart: Multipart) {
 
         println!("Got file {}", file_name);
 
-        let file_path = format!("../files/{}", file_name);
+        let file_path = files_directory.join(file_name);
 
         let data = field.bytes().await.unwrap();
 
