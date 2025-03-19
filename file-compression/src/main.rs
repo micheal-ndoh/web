@@ -17,7 +17,7 @@ fn main() {
 }
 
 pub fn compress_file(input_path: &Path, output_path: &Path) -> io::Result<()> {
-    // Open the input file
+    /
     let mut input_file = File::open(input_path)?;
 
     let output_file = File::create(output_path)?;
