@@ -7,8 +7,8 @@ use std::path::Path;
 
 
 fn main() {
-    let input_path = Path::new("input.txt");
-    let output_path = Path::new("output.gz");
+    let input_path = Path::new("README.md");
+    let output_path = Path::new("README.md.gz");
 
     match compress_file(input_path, output_path) {
         Ok(()) => println!("File compressed successfully!"),
