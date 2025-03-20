@@ -1,6 +1,5 @@
-use std::{fs::File, io::Write};
 use std::env;
-
+use std::{fs::File, io::Write};
 
 use axum::{extract::Multipart, response::Html, routing::get, Router};
 
@@ -13,8 +12,8 @@ async fn hello() -> Html<&'static str> {
 }
 
 pub async fn upload(mut multipart: Multipart) {
-    use std::fs;
     use std::env;
+    use std::fs;
 
     let current_directory = std::env::current_dir().expect("failed to get current directory");
     let files_directory = current_directory.join("files");
@@ -45,7 +44,6 @@ pub async fn upload(mut multipart: Multipart) {
 #[tokio::main]
 
 async fn main() {
-    // let adder = |x: i32, y: i32| x + y;
     let app = Router::new()
         .route("/", get(hello))
         .route("/index", get(index).post(upload));
@@ -58,4 +56,3 @@ async fn main() {
         .await
         .expect("Failed to serve 'app'!");
 }
-
