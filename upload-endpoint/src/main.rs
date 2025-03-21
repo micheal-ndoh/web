@@ -1,4 +1,3 @@
-use std::env;
 use std::{fs::File, io::Write};
 
 use axum::{extract::Multipart, response::Html, routing::get, Router};
@@ -15,7 +14,7 @@ pub async fn upload(mut multipart: Multipart) {
     use std::env;
     use std::fs;
 
-    let current_directory = std::env::current_dir().expect("failed to get current directory");
+    let current_directory = env::current_dir().expect("failed to get current directory");
     let files_directory = current_directory.join("files");
     fs::create_dir_all("../files/").expect("Failed to create 'files' directory");
 
