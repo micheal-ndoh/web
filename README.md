@@ -1,5 +1,7 @@
 # Rust Server
 
+## A series of tasks to learn how to set up a Rust web server
+
 ### Task 1 (Monday): "Hello World Web Server"
 
     - Goal: Set up a minimal Rust web server.
@@ -38,4 +40,9 @@
           This task introduces external libraries, file processing, and basic algorithm integration.
     - Repository Name: rust-file-compression.
 
+### Task 5 (Monday): "Batch File Upload Support"
 
+    - Goal: Enhance the file upload endpoint to support multiple files.
+    - Description:
+      - Modify the file upload endpoint so it can accept and process several files in one HTTP request.
+      - Ensure each file is processed (e.g., stored on disk) and report back an aggregated result.
