@@ -13,6 +13,9 @@ pub async fn compress_all_files() -> impl IntoResponse {
         return format!("Failed to create compressed directory: {}", e);
     }
 
+    // Define the compression level (e.g., 6 for default compression)
+    let compression_level = 6;
+
     // Iterate over files in the uploads directory
     if let Ok(entries) = uploads_dir.read_dir() {
         for entry in entries.flatten() {
@@ -25,9 +28,11 @@ pub async fn compress_all_files() -> impl IntoResponse {
             }
 
             // Compress the file and handle errors
-            if let Err(e) =
-                compress_file(input_path.to_str().unwrap(), output_path.to_str().unwrap())
-            {
+            if let Err(e) = compress_file(
+                input_path.to_str().unwrap(),
+                output_path.to_str().unwrap(),
+                compression_level,
+            ) {
                 return format!("Failed to compress file {}: {}", input_path.display(), e);
             }
         }
