@@ -1,57 +1,61 @@
-use std::{fs::File, io::Write};
+mod handlers;
+use axum::{
+    extract::{Path, Query},
+    response::IntoResponse,
+    routing::{get, post},
+    Router,
+};
+use handlers::{compress_file, upload_file};
+use serde::Deserialize;
+use tokio::net::TcpListener;
+use tower_http::{services::ServeDir, trace::TraceLayer};
 
-use axum::{extract::Multipart, response::Html, routing::get, Router};
+#[tokio::main]
+async fn main() {
+    let compressed = Router::new()
+        .route("/compress", post(compress_file::compress_all_files))
+        .nest_service("/files", ServeDir::new("compressed"));
 
-async fn index() -> Html<&'static str> {
-    Html(std::include_str!("../src/public/index.html"))
-}
+    let uploads = Router::new()
+        .route("/upload", post(upload_file::upload_files))
+        .nest_service("/files", ServeDir::new("uploads"));
 
-async fn hello() -> Html<&'static str> {
-    Html(std::include_str!("../src/public/welcome.html"))
-}
+    // Create a new Axum router
+    let app = Router::new()
+        .route("/", get(|| async { "Hello, World!" }))
+        .route("/path-examples/:parameter", get(path_example_handler))
+        .nest("/uploader", uploads)
+        .nest("/compressor", compressed)
+        .fallback(|| async { r#"{"status":404,"message":"Resource Not Found"}"# })
+        .layer(TraceLayer::new_for_http());
 
-pub async fn upload(mut multipart: Multipart) {
-    use std::env;
-    use std::fs;
-
-    let current_directory = env::current_dir().expect("failed to get current directory");
-    let files_directory = current_directory.join("files");
-    fs::create_dir_all("../files/").expect("Failed to create 'files' directory");
-
-    while let Some(field) = multipart
-        .next_field()
-        .await
-        .expect("failed to extract field")
-    {
-        if field.name().unwrap() != "fileupload" {
-            continue;
+    // Define the address for the server to listen on
+    let ip_addr = "0.0.0.0:3000";
+    let listener = match TcpListener::bind(ip_addr).await {
+        Ok(listener) => listener,
+        Err(e) => {
+            eprintln!("Failed to bind TcpListener to server {e}");
+            return;
         }
+    };
+    println!("[INFO]: Application is running http://{ip_addr}");
 
-        let file_name = field.file_name().unwrap();
-
-        println!("Got file {}", file_name);
-
-        let file_path = files_directory.join(file_name);
-
-        let data = field.bytes().await.unwrap();
-
-        let mut file_handle = File::create(file_path).expect("failed to open file handle");
-
-        file_handle.write_all(&data).expect("failed to write data");
+    // Start the server
+    if let Err(e) = axum::serve(listener, app).await {
+        eprintln!("{e}")
     }
 }
-#[tokio::main]
 
-async fn main() {
-    let app = Router::new()
-        .route("/", get(hello))
-        .route("/index", get(index).post(upload));
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+struct MyQuery {
+    gis: Option<bool>,
+    number: usize,
+}
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
-        .await
-        .expect("Failed to start listener!");
-
-    axum::serve(listener, app)
-        .await
-        .expect("Failed to serve 'app'!");
+async fn path_example_handler(
+    Path(parameter): Path<String>,
+    Query(query): Query<MyQuery>,
+) -> impl IntoResponse {
+    format!("The parameter value is {parameter} and query value is {query:?}")
 }
