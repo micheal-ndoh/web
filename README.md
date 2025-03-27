@@ -46,3 +46,31 @@
     - Description:
       - Modify the file upload endpoint so it can accept and process several files in one HTTP request.
       - Ensure each file is processed (e.g., stored on disk) and report back an aggregated result.
+
+
+### Task 6: Interactive CLI for Batch Uploads
+
+    - Goal: Upgrade the CLI to handle multiple file uploads interactively.
+    - Description:
+        Extend the CLI from Task 3 to allow the user to specify multiple files (or a directory).
+        Add simple progress output (even if just textual status updates) as files are being uploaded.
+
+### Task 7: Supplying Compression Parameters
+
+    - Goal: Allow the client to select compression techniques and levels.
+    - Description:
+        Update both the CLI and server to accept compression options (for example, via command-line flags or HTTP parameters).
+        Adjust the compression function (from Task 4) to take these parameters into account.
+
+### Task 8: Asynchronous Compression Handling
+
+    - Goal: Offload compression tasks so that the server remains responsive.
+    - Description:
+        Modify the server to process compression in an asynchronous manner (using Tokio or async-std).
+        When a file is uploaded, immediately return a unique task ID, and process the compression in the background.
+
+### Task 9: "Status Endpoint for Compression Tasks"
+
+    - Goal: Provide clients with real-time status updates for compression jobs.
+    - Description:
+        Develop a REST API endpoint where a client can query the status (e.g., pending, processing, completed, failed) of a given task using its ID.
