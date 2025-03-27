@@ -4,8 +4,11 @@ name = "upload-endpoint"
 version = "0.1.0"
 
 [dependencies]
-axum = {version = "0.8.1", features = ["multipart"]}
-clap = {version = "4", features = ["derive"]}
-reqwest = {version = "0.12.14", features = ["multipart"]}
-tokio = {version = "1.35.0", features = ["full"]}
-file-uploader = {path = "../file-uploader"}
+serde = { version = "*", features = ["derive"] }
+axum = { version = "0.7", features = ["multipart"] }
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.6.2", features = ["fs", "trace"] }
+flate2 = "1"
+
+[lib]
+path = "../file-compression/src/lib.rs"

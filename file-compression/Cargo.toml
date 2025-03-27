@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-flate2 = { version = "1.0.17", features = ["zlib"], default-features = false }
+flate2 = "1"
