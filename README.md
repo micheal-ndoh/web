@@ -47,7 +47,6 @@
       - Modify the file upload endpoint so it can accept and process several files in one HTTP request.
       - Ensure each file is processed (e.g., stored on disk) and report back an aggregated result.
 
-
 ### Task 6: Interactive CLI for Batch Uploads
 
     - Goal: Upgrade the CLI to handle multiple file uploads interactively.
@@ -74,3 +73,24 @@
     - Goal: Provide clients with real-time status updates for compression jobs.
     - Description:
         Develop a REST API endpoint where a client can query the status (e.g., pending, processing, completed, failed) of a given task using its ID.
+
+### Task 10: Implementing a Task Queue
+
+    - Goal: Build an internal mechanism to manage and track asynchronous tasks.
+    - Description:
+        Design a simple task queue or in-memory store that keeps track of each compression job’s state and progress.
+        Assign unique IDs and update statuses as jobs move through the pipeline.
+
+### Task 11:Robust Error Handling and Retry Logic
+
+    - Goal: Ensure reliability by handling errors gracefully.
+    - Description:
+        Enhance the asynchronous processing (from Task 8) with robust error detection.
+        Implement retry logic for failed tasks and clear error reporting to the status endpoint.
+
+### Task 12: Performance Testing and Benchmarking
+
+    - Goal: Validate and improve system performance.
+    - Description:
+        Write tests and benchmarks to simulate concurrent uploads and compression tasks.
+        Measure performance, identify bottlenecks, and document potential improvements.
