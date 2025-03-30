@@ -1,42 +1,63 @@
-use std::path::PathBuf;
-
-use axum::response::IntoResponse;
+use axum::{extract::Extension, response::IntoResponse, http::StatusCode};
+use sqlx::PgPool;
+use std::fs;
+use std::path::{Path, PathBuf};
+use tokio::task;
 use upload_endpoint::compress_file;
 
-//// Endpoint to trigger file compression on demand
-pub async fn compress_all_files() -> impl IntoResponse {
-    let uploads_dir = PathBuf::from("uploads");
-    let compressed_dir = PathBuf::from("compressed");
+/// Compress files and update database status
+pub async fn compress_all_files(Extension(pool): Extension<PgPool>) -> impl IntoResponse {
+    let compressed_dir = Path::new("compressed");
 
-    // Ensure the compressed directory exists
-    if let Err(e) = std::fs::create_dir_all(&compressed_dir) {
-        return format!("Failed to create compressed directory: {}", e);
+    // Ensure compressed directory exists
+    if let Err(e) = fs::create_dir_all(compressed_dir) {
+        eprintln!("Failed to create compressed directory: {e}");
+        return (StatusCode::INTERNAL_SERVER_ERROR, "Directory creation failed");
     }
 
-    // Define the compression level (e.g., 6 for default compression)
-    let compression_level = 6;
-
-    // Iterate over files in the uploads directory
-    if let Ok(entries) = uploads_dir.read_dir() {
-        for entry in entries.flatten() {
-            let input_path = entry.path();
-            let output_path = compressed_dir.join(entry.file_name()).with_extension("gz");
-
-            // Skip already compressed files
-            if input_path.extension().map_or(false, |ext| ext == "gz") {
-                continue;
-            }
-
-            // Compress the file and handle errors
-            if let Err(e) = compress_file(
-                input_path.to_str().unwrap(),
-                output_path.to_str().unwrap(),
-                compression_level,
-            ) {
-                return format!("Failed to compress file {}: {}", input_path.display(), e);
-            }
+    // Fetch all pending compression tasks
+    let files = match sqlx::query!("SELECT id, file_name FROM compression_tasks WHERE status = 'pending'")
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(files) => files,
+        Err(e) => {
+            eprintln!("Database error: {e}");
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch files");
         }
+    };
+
+    if files.is_empty() {
+        return (StatusCode::OK, "No files to compress");
     }
 
-    String::from("Files compressed successfully")
+    // Process each file asynchronously
+    for file in files {
+        let file_id = file.id;
+        let input_path = PathBuf::from("uploads").join(&file.file_name);
+        let output_path = compressed_dir.join(format!("{}.gz", file.file_name));
+
+        // Clone the database pool for each task
+        let pool_clone = pool.clone();
+
+        // Spawn a background task
+        task::spawn(async move {
+            let compression_level = 6;
+
+            let status = match compress_file(input_path.to_str().unwrap(), output_path.to_str().unwrap(), compression_level) {
+                Ok(_) => "completed",
+                Err(e) => {
+                    eprintln!("Compression error for {}: {e}", file.file_name);
+                    "failed"
+                }
+            };
+
+            // Update the database with the compression result
+            let _ = sqlx::query!("UPDATE compression_tasks SET status = $1 WHERE id = $2", status, file_id)
+                .execute(&pool_clone)
+                .await;
+        });
+    }
+
+    (StatusCode::OK, "Compression started in background")
 }
