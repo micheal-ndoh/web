@@ -1,4 +1,4 @@
-use pbr::ProgressBar; // Import the ProgressBar
+use pbr::ProgressBar;
 use reqwest::multipart;
 use reqwest::Client;
 use std::thread;
@@ -49,7 +49,6 @@ async fn upload_file(
 
     Ok(())
 }
-
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = env::args().collect();
