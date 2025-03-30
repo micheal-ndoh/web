@@ -9,6 +9,9 @@ axum = { version = "0.7", features = ["multipart"] }
 tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.6.2", features = ["fs", "trace"] }
 flate2 = "1"
+sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio", "macros"] }
+dotenvy = "0.15.7"
+
 
 [lib]
 path = "../file-compression/src/lib.rs"
