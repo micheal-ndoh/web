@@ -19,7 +19,7 @@ use std::env;
 
 #[tokio::main]
 async fn main() {
-    // dotenv().ok(); 
+    dotenv().ok(); 
 
     // Initialize database connection
     let pool = establish_connection().await;
