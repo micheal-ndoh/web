@@ -1,25 +1,24 @@
-mod handlers;
 mod db;
+mod handlers;
 
 use axum::{
     extract::{Path, Query},
     response::IntoResponse,
     routing::{get, post},
-    Router, Extension,
+    Extension, Router,
 };
+use db::establish_connection;
 use handlers::{compress_file, upload_file};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 use tower_http::{services::ServeDir, trace::TraceLayer};
-use db::establish_connection;
 
 use dotenvy::dotenv;
-use std::env;
-
+// use std::env;
 
 #[tokio::main]
 async fn main() {
-    dotenv().ok(); 
+    dotenv().ok();
 
     // Initialize database connection
     let pool = establish_connection().await;
