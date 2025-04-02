@@ -1,8 +1,15 @@
+use axum::http::StatusCode;
 use axum::{extract::Extension, response::IntoResponse};
-use sqlx::PgPool;
+use sqlx::{PgPool, FromRow};
 use std::{fs, io::Write, path::Path};
 use tokio::task;
-use axum::http::StatusCode;
+
+// Add this struct to represent the query results
+#[derive(FromRow)]
+struct CompressionTask {
+    id: i32,
+    file_name: String,
+}
 
 pub async fn compress_all_files(
     Extension(pool): Extension<PgPool>,
@@ -16,7 +23,7 @@ pub async fn compress_all_files(
     }
 
     // Get all pending files from database
-    let pending_files = match sqlx::query!(
+    let pending_files = match sqlx::query_as::<_, CompressionTask>(
         "SELECT id, file_name FROM compression_tasks WHERE status = 'pending'"
     )
     .fetch_all(&pool)
@@ -31,23 +38,23 @@ pub async fn compress_all_files(
     };
 
     let file_count = pending_files.len();
-    
+
     if file_count == 0 {
         return (StatusCode::OK, "No files to compress".to_string());
     }
 
     // Process each file in background
-    for file in pending_files {
+    for task in pending_files {
         let pool = pool.clone();
-        let input_path = format!("uploads/{}", file.file_name);
-        let output_path = format!("compressed/{}.gz", file.file_name);
+        let input_path = format!("uploads/{}", task.file_name);
+        let output_path = format!("compressed/{}.gz", task.file_name);
 
         task::spawn(async move {
             // Update status to processing
-            let _ = sqlx::query!(
-                "UPDATE compression_tasks SET status = 'processing' WHERE id = $1",
-                file.id
+            let _ = sqlx::query(
+                "UPDATE compression_tasks SET status = 'processing' WHERE id = $1"
             )
+            .bind(task.id)
             .execute(&pool)
             .await;
 
@@ -57,11 +64,11 @@ pub async fn compress_all_files(
             // Update status based on result
             let status = if result.is_ok() { "completed" } else { "failed" };
 
-            let _ = sqlx::query!(
-                "UPDATE compression_tasks SET status = $1 WHERE id = $2",
-                status,
-                file.id
+            let _ = sqlx::query(
+                "UPDATE compression_tasks SET status = $1 WHERE id = $2"
             )
+            .bind(status)
+            .bind(task.id)
             .execute(&pool)
             .await;
         });
