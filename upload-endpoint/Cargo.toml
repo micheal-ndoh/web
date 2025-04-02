@@ -4,14 +4,14 @@ name = "upload-endpoint"
 version = "0.1.0"
 
 [dependencies]
-serde = { version = "*", features = ["derive"] }
-axum = { version = "0.7", features = ["multipart"] }
-tokio = { version = "1", features = ["full"] }
-tower-http = { version = "0.6.2", features = ["fs", "trace"] }
-flate2 = "1"
-sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio", "macros"] }
+axum = {version = "0.7", features = ["multipart"]}
 dotenvy = "0.15.7"
-
+flate2 = "1"
+serde = {version = "*", features = ["derive"]}
+serde_json = "1.0"
+sqlx = {version = "0.8.3", features = ["postgres", "runtime-tokio", "macros", "migrate"]}
+tokio = {version = "1", features = ["full"]}
+tower-http = {version = "0.6.2", features = ["fs", "trace"]}
 
 [lib]
 path = "../file-compression/src/lib.rs"
