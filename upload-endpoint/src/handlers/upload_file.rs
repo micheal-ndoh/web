@@ -3,6 +3,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
+use dotenv::{dotenv, var};
 use sqlx::Row;
 use sqlx::{postgres::PgQueryResult, PgPool};
 use std::{
@@ -13,9 +14,11 @@ use std::{
 };
 pub async fn upload_files(
     mut multipart: Multipart,
-    Extension(pool): Extension<PgPool>,
+    // Extension(pool): Extension<PgPool>,
 ) -> impl IntoResponse {
-    
+    dotenv().ok();
+    let url = var("DATABASE_URL").unwrap();
+    let pool = PgPool::connect(&url).await.unwrap();
     let mut uploaded_files = Vec::new();
     let mut errors = Vec::new();
 
