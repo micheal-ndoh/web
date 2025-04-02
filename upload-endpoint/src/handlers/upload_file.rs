@@ -1,83 +1,100 @@
-use axum::{extract::Multipart, response::IntoResponse, Extension};
-use sqlx::PgPool;
+use axum::{
+    extract::{Extension, Multipart},
+    http::StatusCode,
+    response::IntoResponse,
+};
+use sqlx::Row;
+use sqlx::{postgres::PgQueryResult, PgPool};
 use std::{
-    fs::File,
+    fs::{self, File},
     io::{self, Write},
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
 };
-use dotenvy::dotenv;
-use std::env;
-
-/// Saves the uploaded file to the `uploads` directory
-async fn save_file(file_name: &str, data: &[u8]) -> io::Result<()> {
-    let save_path = PathBuf::from("uploads").join(file_name);
-    let mut file = File::create(save_path)?; // Create a new file in the uploads directory
-    file.write_all(data) // Write the received data into the file
-}
-
-/// Handles file uploads from a multipart form request
 pub async fn upload_files(
-    Extension(pool): Extension<PgPool>, // Database connection
     mut multipart: Multipart,
+    Extension(pool): Extension<PgPool>,
 ) -> impl IntoResponse {
-    let mut uploaded_files = vec![];
+    
+    let mut uploaded_files = Vec::new();
+    let mut errors = Vec::new();
 
     while let Ok(Some(field)) = multipart.next_field().await {
-        let file_name = match extract_filename(&field) {
-            Ok(value) => value,
-            Err(value) => return value,
+        let file_name = match field.file_name() {
+            Some(name) => {
+                let timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+                format!("{}_{}", timestamp, name.replace(" ", "_"))
+            }
+            None => {
+                errors.push("Skipped field without filename".to_string());
+                continue;
+            }
         };
 
         match field.bytes().await {
-            Err(_) => return format!("Failed to read chunk!"),
             Ok(data) => {
-                if let Err(e) = save_file(&file_name, &data).await {
-                    return format!("Failed to save file: {}", e);
+                // 1. Save file to disk
+                let save_path = PathBuf::from("uploads").join(&file_name);
+                if let Err(e) = fs::create_dir_all("uploads")
+                    .and_then(|_| File::create(&save_path))
+                    .and_then(|mut file| file.write_all(&data))
+                {
+                    errors.push(format!("Failed to save {}: {}", file_name, e));
+                    continue;
                 }
 
-    
-
-                // Insert file into database
-                let result = sqlx::query!(
-                    "INSERT INTO compression_tasks (file_name, status) VALUES ($1, 'pending') RETURNING id, status",
-                    file_name
+                // 2. Register in database
+                let row = match sqlx::query(
+                    "
+                    INSERT INTO compression_tasks (file_name, status)
+                    VALUES ($1, 'pending')
+                    RETURNING id
+                    ",
                 )
+                .bind(&file_name)
                 .fetch_one(&pool)
-                .await;
-
-                match result {
+                .await
+                {
                     Ok(record) => {
-                        uploaded_files.push(format!(
-                            "{{\"id\": {}, \"file\": \"{}\", \"status\": \"{}\"}}",
-                            record.id, file_name, record.status
-                        ));
+                        let id: i32 = record.get("id");
+                        uploaded_files.push(format!("{} (ID: {})", file_name, id));
                     }
                     Err(e) => {
-                        return format!("Failed to insert file into database: {}", e);
+                        errors.push(format!("Failed to register {}: {}", file_name, e));
+                        // Clean up the file if DB registration failed
+                        let _ = fs::remove_file(save_path);
                     }
-                }
+                };
             }
-        };
+            Err(e) => {
+                errors.push(format!("Failed to read file data: {}", e));
+            }
+        }
     }
 
-    format!(
-        r#"{{"status": 201, "message": "Files uploaded successfully.", "files": [{}]}}"#,
-        uploaded_files.join(", ")
-    )
-}
+    // Prepare response
+    let mut response = String::new();
+    if !uploaded_files.is_empty() {
+        response.push_str(&format!(
+            "Successfully uploaded:\n{}\n",
+            uploaded_files.join("\n")
+        ));
+    }
+    if !errors.is_empty() {
+        response.push_str(&format!("\nErrors occurred:\n{}", errors.join("\n")));
+    }
 
-/// Generates a unique filename to prevent overwriting
-fn extract_filename(field: &axum::extract::multipart::Field<'_>) -> Result<String, String> {
-    let mut file_name: String = String::from(field.file_name().unwrap_or("unnamed"))
-        .split(&[' ', '-', ':', '\''])
-        .collect();
-
-    let now = SystemTime::now();
-    match now.duration_since(UNIX_EPOCH) {
-        Ok(duration) => file_name.insert_str(0, &format!("{}_", duration.as_secs())),
-        Err(_) => return Err(format!("Time went backward!")),
-    };
-
-    Ok(file_name)
+    if uploaded_files.is_empty() && errors.is_empty() {
+        (
+            StatusCode::BAD_REQUEST,
+            "No files were uploaded".to_string(),
+        )
+    } else if uploaded_files.is_empty() {
+        (StatusCode::PARTIAL_CONTENT, response)
+    } else {
+        (StatusCode::OK, response)
+    }
 }
