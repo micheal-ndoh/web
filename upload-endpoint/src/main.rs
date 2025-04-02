@@ -16,7 +16,7 @@ use tower_http::{services::ServeDir, trace::TraceLayer};
 
 #[tokio::main]
 async fn main() {
-    dotenvy::dotenv().ok();
+    dotenv::dotenv().ok();
 
     // Initialize database connection
     let pool = match establish_connection().await {
@@ -49,12 +49,14 @@ async fn main() {
         .layer(TraceLayer::new_for_http())
         .layer(Extension(pool));
 
-        let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    // Start server
-    let addr = TcpListener::bind(addr).await.unwrap();
-    println!("Server running on http://{}", addr.local_addr().unwrap());
-    
-    axum::serve(addr, app.into_make_service());
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    println!("Server running on http://{}", addr);
+
+    // Start server and await it
+    let listener = TcpListener::bind(addr).await.unwrap();
+    axum::serve(listener, app)
+        .await
+        .unwrap();
 }
 
 #[derive(Debug, Deserialize)]
