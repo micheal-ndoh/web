@@ -1,13 +1,16 @@
 use pbr::ProgressBar;
 use reqwest::multipart;
 use reqwest::Client;
-use std::thread;
 use std::{
     env,
     fs::File,
     io::{self, Read},
     path::Path,
+    time::Duration,
 };
+
+const FILE_FIELD: &str = "file";
+const COMPRESSION_LEVEL_FIELD: &str = "compression_level";
 
 async fn read_file(file_path: &str) -> io::Result<(String, Vec<u8>)> {
     let file_name = Path::new(file_path)
@@ -27,79 +30,101 @@ async fn upload_file(
     url: &str,
     file_name: String,
     file_data: Vec<u8>,
-    compression: Option<&str>,
-) -> Result<(), reqwest::Error> {
+    compression_level: Option<u32>,
+) -> Result<String, reqwest::Error> {
     let part = multipart::Part::bytes(file_data)
         .file_name(file_name.clone())
-        .mime_str("application/octet-stream")
-        .unwrap_or_else(|_| panic!("Failed to set MIME type")); // Should not fail in practice
+        .mime_str("application/octet-stream")?;
 
-    let mut form = multipart::Form::new().part("file", part);
-    if let Some(compression) = compression {
-        form = form.text("compression", compression.to_string());
+    let mut form = multipart::Form::new().part(FILE_FIELD, part);
+    
+    if let Some(level) = compression_level {
+        form = form.text(COMPRESSION_LEVEL_FIELD, level.to_string());
     }
 
     let response = client.post(url).multipart(form).send().await?;
-
-    if response.status().is_success() {
-        println!("  File '{}' uploaded successfully", file_name);
-    } else {
-        eprintln!("Failed to upload file: {:?}", response.status());
-    }
-
-    Ok(())
+    response.text().await
 }
+
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 3 {
+    if args.len() < 2 {
         eprintln!(
-            "Usage: {} --compression <type> <file_path1> <file_path2> ...",
+            "Usage: {} [--compression-level <1-9>] <file_path1> <file_path2> ...",
             args[0]
         );
-        return;
+        return Ok(());
     }
 
-    let compression = if args[1] == "--compression" {
-        Some(&args[2])
+    let (compression_level, files) = if args[1] == "--compression-level" && args.len() > 3 {
+        match args[2].parse::<u32>() {
+            Ok(level @ 1..=9) => (Some(level), &args[3..]),
+            Ok(_) => {
+                eprintln!("Compression level must be between 1 and 9");
+                return Ok(());
+            }
+            Err(_) => {
+                eprintln!("Invalid compression level");
+                return Ok(());
+            }
+        }
     } else {
-        eprintln!("Specify compression type using --compression");
-        return;
+        (None, &args[1..])
     };
 
     let client = Client::new();
-    let url = "http://localhost:3000/upload-files";
+    let url = "http://localhost:3000/uploader/upload";
 
-    // Initialize the progress bar
-    let total_files = args.len() - 3;
-    let mut pb = ProgressBar::new(total_files as u64);
-    pb.format("╢▌▌░╟\n");
+    println!("Uploading {} files...", files.len());
+    let mut pb = ProgressBar::new(files.len() as u64);
+    pb.format("╢▌▌░╟");
 
-    for (index, file_path) in args[3..].iter().enumerate() {
-        println!("\nUploading file: {}", file_path);
+    let mut success_count = 0;
+    let mut failed_files = Vec::new();
 
-        pb.set(index as u64 + 1);
+    for (index, file_path) in files.iter().enumerate() {
+        pb.set(1 + index as u64);
+        println!("\nProcessing: {}", file_path);
 
-        // Read the file and upload
         match read_file(file_path).await {
             Ok((file_name, file_data)) => {
-                if let Err(err) = upload_file(
-                    &client,
-                    url,
-                    file_name,
-                    file_data,
-                    compression.map(|x| x.as_str()),
-                )
-                .await
-                {
-                    eprintln!("Error uploading file: {}", err);
+                match upload_file(&client, url, file_name, file_data, compression_level).await {
+                    Ok(response) => {
+                        println!("Server response: {}", response);
+                        success_count += 1;
+                    }
+                    Err(e) => {
+                        eprintln!("Upload failed: {}", e);
+                        failed_files.push(file_path.to_string());
+                    }
                 }
             }
-            Err(err) => eprintln!("Error reading file: {}", err),
+            Err(e) => {
+                eprintln!("Error reading file: {}", e);
+                failed_files.push(file_path.to_string());
+            }
         }
 
-        thread::sleep(std::time::Duration::from_millis(100));
+        tokio::time::sleep(Duration::from_millis(100)).await;
     }
 
-    pb.finish_print("\nAll files uploaded successfully!\n");
+    pb.finish();
+    
+    if failed_files.is_empty() {
+        println!("✅ All files uploaded successfully!");
+        if let Some(level) = compression_level {
+            println!("📦 Compression level: {}", level);
+        }
+    } else {
+        println!("⚠️  Upload completed with {} success(es) and {} failure(s)", 
+                success_count, 
+                failed_files.len());
+        println!("Failed files:");
+        for file in failed_files {
+            println!("- {}", file);
+        }
+    }
+
+    Ok(())
 }
