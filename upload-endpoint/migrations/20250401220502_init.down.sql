@@ -1,2 +1,2 @@
 -- Add up migration script here
-DROP TABLE compression_tasks;
+DROP TABLE IF EXISTS compression_tasks;
