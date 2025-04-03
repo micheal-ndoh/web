@@ -8,10 +8,10 @@ use axum::{
     Extension, Router,
 };
 use db::establish_connection;
-use handlers::{compress_file, upload_file};
+use handlers::{check, compress_file, upload_file};
 use serde::Deserialize;
-use tokio::net::TcpListener;
 use std::net::SocketAddr;
+use tokio::net::TcpListener;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 
 #[tokio::main]
@@ -39,12 +39,17 @@ async fn main() {
         .nest_service("/files", ServeDir::new("uploads"))
         .layer(Extension(pool.clone()));
 
+    let check: Router = Router::new()
+        .route("/check/:task_id", get(check::check_status))
+        .layer(Extension(pool.clone()));
+
     // Main API router
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
         .route("/path-examples/:parameter", get(path_example_handler))
         .nest("/uploader", uploads)
         .nest("/compressor", compressor)
+        .nest("/check", check)
         .fallback(|| async { r#"{"status":404,"message":"Resource Not Found"}"# })
         .layer(TraceLayer::new_for_http())
         .layer(Extension(pool));
@@ -54,9 +59,7 @@ async fn main() {
 
     // Start server and await it
     let listener = TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app)
-        .await
-        .unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
 
 #[derive(Debug, Deserialize)]
