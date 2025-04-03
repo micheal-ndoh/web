@@ -94,3 +94,29 @@
     - Description:
         Write tests and benchmarks to simulate concurrent uploads and compression tasks.
         Measure performance, identify bottlenecks, and document potential improvements.
+
+
+To run first:
+
+Serve the endpoint 
+```rust
+cd upload-endpoint
+cargo run -p upload-endpoint
+```
+Upload the files to the endpoint
+```bash
+cargo run -p file-uploader -- /path/to/file1 /path/to/file2
+```
+
+to compress the files 
+```rust
+  curl -X POST http://localhost:3000/compressor/compress
+```
+or 
+```rust
+curl -v -X POST http://localhost:3000/compressor/compress   
+```
+To get the status of the compression task use
+```rust
+curl http://localhost:3000/check/<task_id>
+```
