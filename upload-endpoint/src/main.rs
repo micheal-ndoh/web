@@ -39,8 +39,8 @@ async fn main() {
         .nest_service("/files", ServeDir::new("uploads"))
         .layer(Extension(pool.clone()));
 
-    let check: Router = Router::new()
-        .route("/check/:task_id", get(check::check_status))
+    let status_check: Router = Router::new()
+        .route("/:task_id", get(check::check_status))
         .layer(Extension(pool.clone()));
 
     // Main API router
@@ -49,7 +49,7 @@ async fn main() {
         .route("/path-examples/:parameter", get(path_example_handler))
         .nest("/uploader", uploads)
         .nest("/compressor", compressor)
-        .nest("/check", check)
+        .nest("/check", status_check)
         .fallback(|| async { r#"{"status":404,"message":"Resource Not Found"}"# })
         .layer(TraceLayer::new_for_http())
         .layer(Extension(pool));
