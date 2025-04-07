@@ -3,6 +3,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
+
 use dotenv::{dotenv, var};
 use sqlx::Row;
 use sqlx::{postgres::PgQueryResult, PgPool};
@@ -12,6 +13,31 @@ use std::{
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
 };
+
+use utoipa::ToSchema;
+
+#[derive(ToSchema)]
+pub struct UploadResponse {
+    pub success: Vec<String>,
+    pub errors: Vec<String>,
+}
+
+#[utoipa::path(
+    post,
+    path = "/uploader/upload",
+    request_body(
+        content = inline(UploadRequest),
+        description = "File to upload",
+        content_type = "multipart/form-data"
+    ),
+    responses(
+        (status = 200, description = "Files uploaded successfully", body = UploadResponse),
+        (status = 206, description = "Partial content - some files failed", body = UploadResponse),
+        (status = 400, description = "Bad request - no files provided")
+    ),
+    tag = "file-service"
+)]
+
 pub async fn upload_files(
     mut multipart: Multipart,
     // Extension(pool): Extension<PgPool>,
@@ -100,4 +126,11 @@ pub async fn upload_files(
     } else {
         (StatusCode::OK, response)
     }
+}
+
+#[derive(utoipa::ToSchema)]
+struct UploadRequest {
+    file: Vec<u8>,
+    #[schema(value_type = String, format = Binary)]
+    compression_level: Option<u32>,
 }
