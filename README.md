@@ -98,29 +98,29 @@
 To run first:
 
 Run the database
+
 ```rs
  docker run -it --name compression_db -e POSTGRES_USER=micheal -e POSTGRES_PASSWORD=nemory09 -e POSTGRES_DB=compression_tasks -p 5432:5432 -d postgres
 ```
-
 
 Then exec to it and run the migrations
 
 ```rs
 docker exec -it compression_db psql -U micheal -d compression_tasks
 ```
+
 Then run the migrations
+
 ```rest
-sq
+sqlx migrate run 
+```
 
-
-Serve the endpoint
+Serve the endpoint:
 
 ```rust
 cd upload-endpoint
 cargo run -p upload-endpoint
 ```
-
-
 
 Upload the files to the endpoint
 
