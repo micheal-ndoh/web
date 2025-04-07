@@ -1,5 +1,6 @@
 mod db;
 mod handlers;
+mod openapi;
 
 use axum::{
     extract::{Path, Query},
@@ -9,10 +10,13 @@ use axum::{
 };
 use db::establish_connection;
 use handlers::{check, compress_file, upload_file};
+use openapi::ApiDoc;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::{services::ServeDir, trace::TraceLayer};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 #[tokio::main]
 async fn main() {
@@ -40,16 +44,17 @@ async fn main() {
         .layer(Extension(pool.clone()));
 
     let status_check: Router = Router::new()
-        .route("/:task_id", get(check::check_status))
+        .route("/{task_id}", get(check::check_status))
         .layer(Extension(pool.clone()));
 
     // Main API router
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
-        .route("/path-examples/:parameter", get(path_example_handler))
+        .route("/path-examples/{parameter}", get(path_example_handler))
         .nest("/uploader", uploads)
         .nest("/compressor", compressor)
         .nest("/check", status_check)
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
         .fallback(|| async { r#"{"status":404,"message":"Resource Not Found"}"# })
         .layer(TraceLayer::new_for_http())
         .layer(Extension(pool));
