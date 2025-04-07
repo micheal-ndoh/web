@@ -6,6 +6,34 @@ use axum::{
 use sqlx::Row;
 use sqlx::PgPool;
 
+use utoipa::ToSchema;
+
+#[derive(ToSchema)]
+pub struct StatusResponse {
+    pub task_id: i32,
+    pub file_name: String,
+    pub status: String,
+}
+
+#[derive(ToSchema)]
+pub struct ErrorResponse {
+    pub message: String,
+}
+
+#[utoipa::path(
+    get,
+    path = "/check/{task_id}",
+    params(
+        ("task_id" = i32, Path, description = "Task ID to check")
+    ),
+    responses(
+        (status = 200, description = "Status found", body = StatusResponse),
+        (status = 404, description = "Task not found", body = ErrorResponse),
+        (status = 500, description = "Internal server error", body = ErrorResponse)
+    ),
+    tag = "file-service"
+)]
+
 pub async fn check_status(
     Path(task_id): Path<i32>,
     Extension(pool): Extension<PgPool>,

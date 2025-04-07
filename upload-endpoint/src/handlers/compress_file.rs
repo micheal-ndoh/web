@@ -11,6 +11,27 @@ struct CompressionTask {
     file_name: String,
 }
 
+
+
+
+use utoipa::ToSchema;
+
+#[derive(ToSchema)]
+pub struct CompressionResponse {
+    pub message: String,
+    pub file_count: usize,
+}
+
+#[utoipa::path(
+    post,
+    path = "/compressor/compress",
+    responses(
+        (status = 200, description = "Compression started", body = CompressionResponse),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "file-service"
+)]
+
 pub async fn compress_all_files(Extension(pool): Extension<PgPool>) -> impl IntoResponse {
     // Ensure compressed directory exists
     if let Err(e) = fs::create_dir_all("compressed") {
