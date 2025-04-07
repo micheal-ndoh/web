@@ -95,28 +95,59 @@
         Write tests and benchmarks to simulate concurrent uploads and compression tasks.
         Measure performance, identify bottlenecks, and document potential improvements.
 
-
 To run first:
 
-Serve the endpoint 
+Run the database
+```rs
+ docker run -it --name compression_db -e POSTGRES_USER=micheal -e POSTGRES_PASSWORD=nemory09 -e POSTGRES_DB=compression_tasks -p 5432:5432 -d postgres
+```
+
+
+Then exec to it and run the migrations
+
+```rs
+docker exec -it compression_db psql -U micheal -d compression_tasks
+```
+Then run the migrations
+```rest
+sq
+
+
+Serve the endpoint
+
 ```rust
 cd upload-endpoint
 cargo run -p upload-endpoint
 ```
+
+
+
 Upload the files to the endpoint
+
 ```bash
 cargo run -p file-uploader -- /path/to/file1 /path/to/file2
 ```
 
-to compress the files 
+to compress the files
+
 ```rust
   curl -X POST http://localhost:3000/compressor/compress
 ```
-or 
+
+or
+
 ```rust
 curl -v -X POST http://localhost:3000/compressor/compress   
 ```
+
 To get the status of the compression task use
+
 ```rust
 curl http://localhost:3000/check/<task_id>
+```
+
+To get swagger documentation
+
+```rust
+http://localhost:3000/swagger-ui
 ```
