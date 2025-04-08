@@ -95,9 +95,9 @@
         Write tests and benchmarks to simulate concurrent uploads and compression tasks.
         Measure performance, identify bottlenecks, and document potential improvements.
 
-To run first:
+In this project I linked my postgres database from the docker container to my local machine.
 
-Run the database
+Run the database.
 
 ```rs
  docker run -it --name compression_db -e POSTGRES_USER=micheal -e POSTGRES_PASSWORD=nemory09 -e POSTGRES_DB=compression_tasks -p 5432:5432 -d postgres
