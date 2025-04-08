@@ -5,7 +5,11 @@ use std::io::{self, Read, Write};
 
 /// Compresses a file using gzip and saves it in the `compressed` directory
 /// Allows specifying the compression level.
-pub fn compress_file(input_file: &str, output_file: &str, compression_level: u32) -> io::Result<()> {
+pub fn compress_file(
+    input_file: &str,
+    output_file: &str,
+    compression_level: u32,
+) -> io::Result<()> {
     let mut input = File::open(input_file)?;
     let mut data = Vec::new();
     input.read_to_end(&mut data)?;

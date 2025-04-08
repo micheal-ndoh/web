@@ -11,9 +11,6 @@ struct CompressionTask {
     file_name: String,
 }
 
-
-
-
 use utoipa::ToSchema;
 
 #[derive(ToSchema)]

@@ -37,7 +37,7 @@ async fn upload_file(
         .mime_str("application/octet-stream")?;
 
     let mut form = multipart::Form::new().part(FILE_FIELD, part);
-    
+
     if let Some(level) = compression_level {
         form = form.text(COMPRESSION_LEVEL_FIELD, level.to_string());
     }
@@ -110,16 +110,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     pb.finish();
-    
+
     if failed_files.is_empty() {
         println!("✅ All files uploaded successfully!");
         if let Some(level) = compression_level {
             println!("📦 Compression level: {}", level);
         }
     } else {
-        println!("⚠️  Upload completed with {} success(es) and {} failure(s)", 
-                success_count, 
-                failed_files.len());
+        println!(
+            "⚠️  Upload completed with {} success(es) and {} failure(s)",
+            success_count,
+            failed_files.len()
+        );
         println!("Failed files:");
         for file in failed_files {
             println!("- {}", file);
